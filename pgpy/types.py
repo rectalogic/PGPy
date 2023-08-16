@@ -195,7 +195,7 @@ class Armorable(metaclass=abc.ABCMeta):
             po = obj.parse(bytearray(blob, 'latin-1'))
 
         else:
-            po = obj.parse(bytearray(blob))
+            po = obj.parse(memoryview(blob))
 
         if po is not None:
             return (obj, po)
