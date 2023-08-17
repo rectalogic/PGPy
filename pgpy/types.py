@@ -8,6 +8,7 @@ import binascii
 import bisect
 import codecs
 import collections
+import mmap
 import operator
 import os
 import re
@@ -81,7 +82,7 @@ class Armorable(metaclass=abc.ABCMeta):
         if isinstance(text, str):
             return bool(re.match(r'^[ -~\r\n\t]*$', text, flags=re.ASCII))
 
-        if isinstance(text, (bytes, bytearray)):
+        if isinstance(text, (bytes, bytearray, memoryview, mmap.mmap)):
             return bool(re.match(br'^[ -~\r\n\t]*$', text, flags=re.ASCII))
 
         raise TypeError("Expected: ASCII input of type str, bytes, or bytearray")  # pragma: no cover
@@ -94,7 +95,7 @@ class Armorable(metaclass=abc.ABCMeta):
         :raises: :py:exc:`TypeError` if ``text`` is not a ``str``, ``bytes``, or ``bytearray``
         :returns: Whether the text is ASCII-armored.
         """
-        if isinstance(text, (bytes, bytearray)):  # pragma: no cover
+        if isinstance(text, (bytes, bytearray, memoryview, mmap.mmap)):  # pragma: no cover
             text = text.decode('latin-1')
 
         return Armorable.__armor_regex.search(text) is not None
@@ -112,10 +113,10 @@ class Armorable(metaclass=abc.ABCMeta):
         """
         m = {'magic': None, 'headers': None, 'body': bytearray(), 'crc': None}
         if not Armorable.is_ascii(text):
-            m['body'] = bytearray(text)
+            m['body'] = memoryview(text)
             return m
 
-        if isinstance(text, (bytes, bytearray)):  # pragma: no cover
+        if isinstance(text, (bytes, bytearray, memoryview, mmap.mmap)):  # pragma: no cover
             text = text.decode('latin-1')
 
         m = Armorable.__armor_regex.search(text)
@@ -191,7 +192,7 @@ class Armorable(metaclass=abc.ABCMeta):
     @classmethod
     def from_blob(cls, blob):
         obj = cls()
-        if (not isinstance(blob, bytes)) and (not isinstance(blob, bytearray)):
+        if not isinstance(blob, (bytes, bytearray, memoryview, mmap.mmap)):
             po = obj.parse(bytearray(blob, 'latin-1'))
 
         else:
@@ -692,7 +693,7 @@ class Fingerprint(str):
             return str(self) == str(other)
 
         if isinstance(other, (str, bytes, bytearray)):
-            if isinstance(other, (bytes, bytearray)):  # pragma: no cover
+            if isinstance(other, (bytes, bytearray, memoryview, mmap.mmap)):  # pragma: no cover
                 other = other.decode('latin-1')
 
             other = other.replace(' ', '')
